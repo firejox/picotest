@@ -16,24 +16,13 @@ struct PicoTest
 
   protected def describe_impl(description : String, file, line, end_line) : Nil
     self_ptr = container_of(pointerof(@reporter), PicoTest, @reporter)
-    machine = Machine.new(self_ptr, Machine::State::Init, line)
+    machine = Machine.new(self_ptr, Machine::Phase::Init, line)
 
     @reporter.describe_scope(description, file, line) do
       with machine yield
-      machine.move_next Machine::State::Before
 
-      loop do
+      while machine.next_phase!
         with machine yield
-
-        case machine.@state
-        when Machine::State::Before
-          machine.move_next(Machine::State::Run)
-        when Machine::State::Next
-          machine.move_next(Machine::State::After)
-        when Machine::State::After
-          break if machine.final_state?
-          machine.move_next(Machine::State::Before)
-        end
       end
     end
   end

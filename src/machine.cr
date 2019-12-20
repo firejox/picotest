@@ -3,48 +3,76 @@ require "./assert"
 # :nodoc:
 struct PicoTest
   private struct Machine
-    enum State
+    enum Phase
       Init
       Before
       Run
-      Next
       After
     end
 
-    def initialize(@spec : PicoTest*, @state : State, @line : Int32)
+    def initialize(@spec : PicoTest*, @phase : Phase, @line : Int32)
       @last_line = 0
+      @before_skippable = true
+      @after_skippable = true
     end
 
     def run_validate_at(line : Int32)
-      case {@state, @line}
-      when {State::Run, .<=(line)}
+      case {@phase, @line}
+      when {Phase::Run, .<=(line)}
         yield
-      when {State::Init, _}
+      when {Phase::Init, _}
         @last_line = line
       end
       nil
     end
 
-    # :nodoc:
-    def move_next(@state : State)
+    def next_phase! : Bool
+      while true
+        case @phase
+        when Phase::Init
+          @phase = Phase::Before
+
+          next if @before_skippable
+          return true
+        when Phase::Before
+          @phase = Phase::Run
+          return true
+        when Phase::Run
+          @phase = Phase::After
+
+          next if @after_skippable
+          return true
+        when Phase::After
+          return false if @last_line <= @line
+
+          @phase = Phase::Before
+
+          next if @before_skippable
+          return true
+        end
+      end
     end
 
-    # :nodoc:
-    def move_next_at(@line : Int32)
-      @state = State::Next
-    end
-
-    # :nodoc:
-    def final_state?
-      @state == State::After && @last_line <= @line
+    def next_line_state!(@line : Int32) : Bool
+      !(@before_skippable && @after_skippable)
     end
 
     def before : Nil
-      yield if @state.before?
+      case @phase
+      when Phase::Before
+        yield
+      when Phase::Init
+        @before_skippable = false
+      end
     end
 
     def after : Nil
-      yield if @state.after?
+      case @phase
+      when Phase::After
+        yield
+      when Phase::Init
+        @after_skippable = false
+      end
     end
 
     def describe_impl(description, file, line, end_line) : Nil
@@ -59,8 +87,7 @@ struct PicoTest
         describe_impl({{ description }}, {{ file }}, {{ line }}, {{ end_line }}) do
           {{ yield }}
         end
-        move_next_at({{ end_line }})
-        break true
+        break next_line_state!({{ end_line }})
       end
     end
 
@@ -76,8 +103,7 @@ struct PicoTest
         it_impl({{ description }}, {{ file }}, {{ line }}, {{ end_line }}) do
           {{ yield }}
         end
-        move_next_at({{ end_line }})
-        break true
+        break next_line_state!({{ end_line }})
       end
     end
 
@@ -89,8 +115,7 @@ struct PicoTest
       {% description = description.is_a?(StringLiteral) ? description : description.stringify %}
       next if run_validate_at({{ line }}) do
         pending_impl({{ description }}, {{ file }}, {{ line }}, {{ end_line }})
-        move_next_at({{ end_line }})
-        break true
+        break next_line_state!({{ end_line }})
       end
     end
   end

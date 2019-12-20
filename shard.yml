@@ -1,0 +1,9 @@
+name: picotest
+version: 0.1.0
+
+authors:
+  - firejox <firejox@gmail.com>
+
+crystal: 0.32.0
+
+license: MIT

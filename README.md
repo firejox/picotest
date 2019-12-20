@@ -6,7 +6,7 @@ A tiny test framework for Crystal.
 
 * No Object class pollution
 * No global macro
-* Without proc overhead
+* Without closure overhead
 * Support `assert`, `reject`, `assert_raise`, `reject_raise` basic assertions.
 
 ## Installation
@@ -38,15 +38,17 @@ PicoTest.spec do
       reject true == false
     end
 
-    it "catch raise" do
-      assert_raise(Exception) do
-        raise "OH NO!"
+    describe "nest spec" do
+      it "catch raise" do
+        assert_raise(Exception) do
+          raise "OH NO!"
+        end
       end
-    end
 
-    it "no raise in block" do
-      reject_raise do
-        "it is safe"
+      it "no raise in block" do
+        reject_raise do
+          "it is safe"
+        end
       end
     end
 

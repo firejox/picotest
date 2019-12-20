@@ -10,15 +10,17 @@ PicoTest.spec do
       reject true == false
     end
 
-    it "catch raise" do
-      assert_raise(Exception) do
-        raise "OH NO!"
+    describe "nest spec" do
+      it "catch raise" do
+        assert_raise(Exception) do
+          raise "OH NO!"
+        end
       end
-    end
 
-    it "no raise in block" do
-      reject_raise do
-        "it is safe"
+      it "no raise in block" do
+        reject_raise do
+          "it is safe"
+        end
       end
     end
 

@@ -27,7 +27,11 @@ Add this into spec then Run with `crystal spec`
 
 ```crystal
 require "picotest"
+```
 
+### Example Code
+
+```crystal
 PicoTest.spec do
   describe "example spec" do
     it "assert true == true" do
@@ -60,9 +64,39 @@ PicoTest.spec do
 end
 ```
 
+### Before/After Hook
+
+```crystal
+# The execution order is A -> D -> F -> E -> B
+PicoTest.spec do
+  describe "context" do
+    before do
+      # A
+    end
+
+    after do
+      # B
+    end
+
+    describe "nested context" do
+      before do
+        # D
+      end
+
+      after do
+        # E
+      end
+
+      it "F" do
+      end
+    end
+  end
+end
+```
+
 ## Development
 
-- [ ] `before`, `after` hooks
+- [x] `before`, `after` hooks
 - [ ] time info records
 - [ ] tag on test cases
 - [ ] run spec parallel per file in MT mode

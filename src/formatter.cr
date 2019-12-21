@@ -3,10 +3,8 @@ require "./context"
 
 struct PicoTest
   abstract struct Formatter
-    def push
-    end
-
-    def pop
+    def new_scope
+      yield
     end
 
     def report(&)
@@ -36,8 +34,8 @@ struct PicoTest
   end
 
   struct VerboseFormatter < Formatter
-    INDENT_SPACE = 2
-    EXCEPTION_INDENT = 4
+    INDENT_SPACE       =  2
+    EXCEPTION_INDENT   =  4
     STACK_TRACE_INDENT = 10
 
     @last_description : String? = nil
@@ -46,13 +44,11 @@ struct PicoTest
       @indent = 0
     end
 
-    def push
+    def new_scope
       @indent += 1
-    end
-
-    def pop
+      yield
+    ensure
       @indent -= 1
-      @last_description = nil
     end
 
     def report

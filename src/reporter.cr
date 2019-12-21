@@ -17,41 +17,43 @@ struct PicoTest::Reporter
   def describe_scope(description, file, line)
     node = ExampleGroup.new(@top_node, description, file, line)
     @top_node = pointerof(node)
-    @formatter.push
-    @formatter.report { node }
 
-    yield
+    @formatter.new_scope do
+      @formatter.report { node }
+      yield
+    end
 
-    @formatter.pop
+    @top_node = @top_node.value.@parent
   end
 
   def it_scope(description, file, line)
-    @formatter.push
-    yield
-  rescue ex : PicoTest::AssertionError
-    node = Example(Failed).new(@top_node, description, file, line)
-    node.exception = ex
-    @formatter.report { node }
-    @failed += 1
-  rescue ex
-    node = Example(Error).new(@top_node, description, file, line)
-    node.exception = PicoTest::UnhandledError.new(ex, file, line)
-    @formatter.report { node }
-    @error += 1
-  else
-    node = Example(Pass).new(@top_node, description, file, line)
-    @formatter.report { node }
-    @passed += 1
-  ensure
-    @formatter.pop
+    @formatter.new_scope do
+      begin
+        yield
+      rescue ex : PicoTest::AssertionError
+        node = Example(Failed).new(@top_node, description, file, line)
+        node.exception = ex
+        @formatter.report { node }
+        @failed += 1
+      rescue ex
+        node = Example(Error).new(@top_node, description, file, line)
+        node.exception = PicoTest::UnhandledError.new(ex, file, line)
+        @formatter.report { node }
+        @error += 1
+      else
+        node = Example(Pass).new(@top_node, description, file, line)
+        @formatter.report { node }
+        @passed += 1
+      end
+    end
   end
 
   def pending_scope(description, file, line)
-    node = Example(Pending).new(@top_node, description, file, line)
-    @formatter.push
-    @formatter.report { node }
-    @formatter.pop
-    @pending += 1
+    @formatter.new_scope do
+      node = Example(Pending).new(@top_node, description, file, line)
+      @formatter.report { node }
+      @pending += 1
+    end
   end
 
   def print_statistics_and_exit

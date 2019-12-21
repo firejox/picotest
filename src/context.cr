@@ -9,10 +9,10 @@ struct PicoTest
     def initialize(@description : String, @file : String, @line : Int32)
     end
   end
-  
+
   struct ExampleGroup < Context
     @parent : Pointer(self)
-    
+
     def initialize(parent : Pointer(self), description : String, file : String, line : Int32)
       super(description, file, line)
       @parent = parent
@@ -20,13 +20,16 @@ struct PicoTest
   end
 
   private struct None; end
+
   private struct Pass; end
+
   private struct Failed; end
+
   private struct Error; end
+
   private struct Pending; end
 
   struct Example(T) < Context
-
     property exception : (UnhandledError | AssertionError | Nil)
     @parent : Pointer(ExampleGroup)
 

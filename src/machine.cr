@@ -82,7 +82,7 @@ struct PicoTest
     end
 
     macro describe(description, file = __FILE__, line = __LINE__, end_line = __END_LINE__)
-      {% description = description.is_a?(StringLiteral) ? description : description.stringify %}
+      {% description = description.stringify %}
       next if run_validate_at({{ line }}) do
         describe_impl({{ description }}, {{ file }}, {{ line }}, {{ end_line }}) do
           {{ yield }}
@@ -98,7 +98,7 @@ struct PicoTest
     end
 
     macro it(description, file = __FILE__, line = __LINE__, end_line = __END_LINE__)
-      {% description = description.is_a?(StringLiteral) ? description : description.stringify %}
+      {% description = description.stringify %}
       next if run_validate_at({{ line }}) do
         it_impl({{ description }}, {{ file }}, {{ line }}, {{ end_line }}) do
           {{ yield }}
@@ -112,7 +112,7 @@ struct PicoTest
     end
 
     macro pending(description, file = __FILE__, line = __LINE__, end_line = __END_LINE__)
-      {% description = description.is_a?(StringLiteral) ? description : description.stringify %}
+      {% description = description.stringify %}
       next if run_validate_at({{ line }}) do
         pending_impl({{ description }}, {{ file }}, {{ line }}, {{ end_line }})
         break next_line_state!({{ end_line }})

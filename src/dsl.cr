@@ -1,4 +1,3 @@
-require "./description"
 require "./macros"
 require "./machine"
 require "./error"
@@ -8,7 +7,6 @@ include PicoTest::Macros
 
 struct PicoTest
   @@global_spec : PicoTest = new
-  @@global_spec.@reporter.init_stack
 
   def self.spec
     with @@global_spec yield
@@ -28,7 +26,7 @@ struct PicoTest
   end
 
   macro describe(description, file = __FILE__, line = __LINE__, end_line = __END_LINE__)
-    {% description = description.is_a?(StringLiteral) ? description : description.stringify %}
+    {% description = description.stringify %}
     describe_impl({{ description }}, {{ file }}, {{ line }}, {{ end_line }}) do
       {{ yield }}
     end
@@ -41,7 +39,7 @@ struct PicoTest
   end
 
   macro it(description, file = __FILE__, line = __LINE__, end_line = __END_LINE__)
-    {% description = description.is_a?(StringLiteral) ? description : description.stringify %}
+    {% description = description.stringify %}
     it_impl({{ description }}, {{ file }}, {{ line }}, {{ end_line }}) do
       {{ yield }}
     end
@@ -52,7 +50,7 @@ struct PicoTest
   end
 
   macro pending(description, file = __FILE__, line = __LINE__, end_line = __END_LINE__, &block)
-    {% description = description.is_a?(StringLiteral) ? description : description.stringify %}
+    {% description = description.stringify %}
     pending_impl({{ description }}, {{ file }}, {{ line }}, {{ end_line }})
   end
 

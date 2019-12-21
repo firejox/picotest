@@ -1,90 +1,57 @@
-require "./list"
-require "./macros"
-require "./description"
 require "colorize"
-
-include PicoTest::Macros
+require "./context"
+require "./formatter"
 
 struct PicoTest::Reporter
   @indent = 0
-  @desc_stack = List.new
   @passed = 0
   @failed = 0
   @error = 0
   @pending = 0
 
   def initialize(@io : IO)
-  end
-
-  # initialize description stack
-  protected def init_stack
-    @desc_stack.init
+    @top_node = Pointer(ExampleGroup).null
+    @formatter = VerboseFormatter.new(@io)
   end
 
   def describe_scope(description, file, line)
-    node = PicoTest::Description.new(:"describe", description, file, line)
-    push_description pointerof(node.@link)
-    print_top_description color: :white, prefix: :"", suffix: :""
+    node = ExampleGroup.new(@top_node, description, file, line)
+    @top_node = pointerof(node)
+    @formatter.push
+    @formatter.report { node }
 
     yield
 
-    pop_description
+    @formatter.pop
   end
 
   def it_scope(description, file, line)
-    node = PicoTest::Description.new(:"it", description, file, line)
-    push_description pointerof(node.@link)
+    @formatter.push
     yield
   rescue ex : PicoTest::AssertionError
-    print_top_description color: :red, prefix: :"- ", suffix: :" [Failed]"
-    print_backtrace(ex.message, ex.file, ex.line)
+    node = Example(Failed).new(@top_node, description, file, line)
+    node.exception = ex
+    @formatter.report { node }
     @failed += 1
   rescue ex
-    print_top_description color: :red, prefix: :"- ", suffix: :" [Error]"
-    print_backtrace("Unhandled exception caught: #{ex}", file, line)
+    node = Example(Error).new(@top_node, description, file, line)
+    node.exception = PicoTest::UnhandledError.new(ex, file, line)
+    @formatter.report { node }
     @error += 1
   else
-    print_top_description color: :light_green, prefix: :"- ", suffix: :""
+    node = Example(Pass).new(@top_node, description, file, line)
+    @formatter.report { node }
     @passed += 1
   ensure
-    pop_description
+    @formatter.pop
   end
 
   def pending_scope(description, file, line)
-    node = PicoTest::Description.new(:"pending", description, file, line)
-    push_description pointerof(node.@link)
-    print_top_description color: :light_gray, prefix: :"- ", suffix: :" [Pending]"
-    pop_description
+    node = Example(Pending).new(@top_node, description, file, line)
+    @formatter.push
+    @formatter.report { node }
+    @formatter.pop
     @pending += 1
-  end
-
-  # push description stack
-  private def push_description(desc_ptr)
-    @indent += 1
-    @desc_stack.unshift desc_ptr
-  end
-
-  # pop description stack
-  private def pop_description
-    @indent -= 1
-    @desc_stack.shift
-  end
-
-  def print_backtrace(message, file, line)
-    @io.printf "%#{@indent * 2 + 4}s#{message}\n", ""
-    @io.printf "%#{@indent * 2 + 10}sfrom #{file}:#{line}\n", ""
-
-    @desc_stack.each do |it|
-      desc_ptr = container_of(it, PicoTest::Description, @link)
-      @io.printf "%#{@indent * 2 + 10}sfrom #{desc_ptr.value.file}:#{desc_ptr.value.line} - #{desc_ptr.value.dsl_type} \"#{desc_ptr.value.description}\"\n", ""
-    end
-  end
-
-  def print_top_description(color, prefix, suffix)
-    desc_ptr = container_of(@desc_stack.first, PicoTest::Description, @link)
-    info = "#{prefix}#{desc_ptr.value.description}#{suffix}"
-
-    @io.printf "%#{@indent * 2}s%s\n", "", info.colorize(color)
   end
 
   def print_statistics_and_exit

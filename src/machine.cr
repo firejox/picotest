@@ -1,4 +1,5 @@
 require "./assert"
+require "./spec"
 
 # :nodoc:
 struct PicoTest
@@ -10,7 +11,7 @@ struct PicoTest
       After
     end
 
-    def initialize(@spec : PicoTest*, @phase : Phase, @line : Int32)
+    def initialize(@spec : PicoTest::Spec*, @phase : Phase, @line : Int32)
       @last_line = 0
       @before_skippable = true
       @after_skippable = true

@@ -7,13 +7,13 @@ struct PicoTest
       yield
     end
 
-    def report(&)
+    def report(context)
     end
 
     def finish
     end
 
-    def before_example(&)
+    def before_example(description)
     end
   end
 
@@ -51,40 +51,49 @@ struct PicoTest
       @indent -= 1
     end
 
-    def report
-      context = yield
-      case context
-      when ExampleGroup
-        @io.printf "%#{@indent * INDENT_SPACE}s%s\n", "", context.description.colorize(:white)
-      when Example(Pass)
-        @io.printf "%#{@indent * INDENT_SPACE}s%s\n", "", context.report_description(typeof(self)).colorize(:light_green)
-      when Example(Pending)
-        @io.printf "%#{@indent * INDENT_SPACE}s%s\n", "", context.report_description(typeof(self)).colorize(:light_gray)
-      when Example(Failed), Example(Error)
-        @io.printf "%#{@indent * INDENT_SPACE}s%s\n", "", context.report_description(typeof(self)).colorize(:red)
+    def report(context : ExampleGroup)
+      @io.printf "%#{@indent * INDENT_SPACE}s%s\n", "", context.description.colorize(:white)
+    end
 
-        context.backtrace do |obj|
-          case obj
-          when UnhandledError
-            @io.printf "%#{@indent * INDENT_SPACE + EXCEPTION_INDENT}s%s\n", "", obj.description
-          when AssertionError
-            @io.printf "%#{@indent * INDENT_SPACE + EXCEPTION_INDENT}s%s\n", "", obj.description
-            @io.printf "%#{@indent * INDENT_SPACE + STACK_TRACE_INDENT}sfrom %s:%-4d|\n", "", obj.file, obj.line
-          when Example
-            @io.printf "%#{@indent * INDENT_SPACE + STACK_TRACE_INDENT}sfrom %s:%-4d|   it %s\n", "", obj.file, obj.line, obj.description
-          when ExampleGroup
-            @io.printf "%#{@indent * INDENT_SPACE + STACK_TRACE_INDENT}sfrom %s:%-4d|   describe %s\n", "", obj.file, obj.line, obj.description
-          end
+    def report(context : Example(Pass))
+      @io.printf "%#{@indent * INDENT_SPACE}s%s\n", "", context.report_description(typeof(self)).colorize(:light_green)
+    end
+
+    def report(context : Example(Pending))
+      @io.printf "%#{@indent * INDENT_SPACE}s%s\n", "", context.report_description(typeof(self)).colorize(:light_gray)
+    end
+
+    macro error_backtrace(context)
+      {{context}}.backtrace do |obj|
+        case obj
+        when UnhandledError
+          @io.printf "%#{@indent * INDENT_SPACE + EXCEPTION_INDENT}s%s\n", "", obj.description
+        when AssertionError
+          @io.printf "%#{@indent * INDENT_SPACE + EXCEPTION_INDENT}s%s\n", "", obj.description
+          @io.printf "%#{@indent * INDENT_SPACE + STACK_TRACE_INDENT}sfrom %s:%-4d|\n", "", obj.file, obj.line
+        when Example
+          @io.printf "%#{@indent * INDENT_SPACE + STACK_TRACE_INDENT}sfrom %s:%-4d|   it %s\n", "", obj.file, obj.line, obj.description
+        when ExampleGroup
+          @io.printf "%#{@indent * INDENT_SPACE + STACK_TRACE_INDENT}sfrom %s:%-4d|   describe %s\n", "", obj.file, obj.line, obj.description
         end
       end
+    end
+
+    def report(context : Example(Failed))
+      @io.printf "%#{@indent * INDENT_SPACE}s%s\n", "", context.report_description(typeof(self)).colorize(:red)
+      error_backtrace(context)
+    end
+
+    def report(context : Example(Error))
+      @io.printf "%#{@indent * INDENT_SPACE}s%s\n", "", context.report_description(typeof(self)).colorize(:red)
+      error_backtrace(context)
     end
 
     def finish
       @io.puts
     end
 
-    def before_example
-      @last_description = yield
+    def before_example(@last_description)
     end
   end
 end

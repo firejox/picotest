@@ -2,59 +2,46 @@ require "./macros"
 require "./machine"
 require "./error"
 require "./assert"
+require "./spec"
 
 include PicoTest::Macros
 
 struct PicoTest
-  @@global_spec : PicoTest = new
-
-  def self.spec
-    with @@global_spec yield
-  end
-
-  protected def describe_impl(description : String, file, line, end_line) : Nil
-    self_ptr = container_of(pointerof(@reporter), PicoTest, @reporter)
-    machine = Machine.new(self_ptr, Machine::Phase::Init, line)
-
-    @reporter.describe_scope(description, file, line) do
-      with machine yield
-
-      while machine.next_phase!
+  struct Spec
+    protected def describe_impl(description : String, file, line, end_line) : Nil
+      describe_internal(description, file, line) do
+        machine = Machine.new(self.self_pointer, Machine::Phase::Init, line)
         with machine yield
+
+        while machine.next_phase!
+          with machine yield
+        end
+      end
+    end
+
+    protected def it_impl(description : String, file, line, end_line) : Nil
+      it_internal(description, file, line) do
+        with PicoTest::Assert yield
+      end
+    end
+
+    protected def pending_impl(description : String, file, line, end_line) : Nil
+      pending_internal(description, file, line)
+    end
+
+    macro describe(description, file = __FILE__, line = __LINE__, end_line = __END_LINE__)
+      {% description = description.stringify %}
+      describe_impl({{ description }}, {{ file }}, {{ line }}, {{ end_line }}) do
+        {{ yield }}
       end
     end
   end
 
-  macro describe(description, file = __FILE__, line = __LINE__, end_line = __END_LINE__)
-    {% description = description.stringify %}
-    describe_impl({{ description }}, {{ file }}, {{ line }}, {{ end_line }}) do
-      {{ yield }}
+  def self.spec
+    Spec::Runner.global_runner do
+      spec = new_spec
+      with spec yield
+      report pointerof(spec)
     end
-  end
-
-  protected def it_impl(description : String, file, line, end_line) : Nil
-    @reporter.it_scope(description, file, line) do
-      with PicoTest::Assert yield
-    end
-  end
-
-  macro it(description, file = __FILE__, line = __LINE__, end_line = __END_LINE__)
-    {% description = description.stringify %}
-    it_impl({{ description }}, {{ file }}, {{ line }}, {{ end_line }}) do
-      {{ yield }}
-    end
-  end
-
-  protected def pending_impl(description : String, file, line, end_line)
-    @reporter.pending_scope(description.to_s, file, line)
-  end
-
-  macro pending(description, file = __FILE__, line = __LINE__, end_line = __END_LINE__, &block)
-    {% description = description.stringify %}
-    pending_impl({{ description }}, {{ file }}, {{ line }}, {{ end_line }})
-  end
-
-  at_exit do
-    @@global_spec.@reporter.print_statistics_and_exit
   end
 end

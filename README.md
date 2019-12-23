@@ -97,9 +97,10 @@ end
 ## Development
 
 - [x] `before`, `after` hooks
-- [ ] time info records
+- [x] report duration of spec
 - [ ] tag on test cases
-- [ ] run spec parallel per file in MT mode
+- [ ] run spec unit parallel in MT mode
+- [ ] power assert support
 
 ## Contributing
 

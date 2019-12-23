@@ -1,4 +1,5 @@
 require "colorize"
+require "time"
 require "./context"
 require "./formatter"
 
@@ -10,6 +11,7 @@ struct PicoTest::Spec
 
   def initialize(@io : IO, @formatter : Formatter)
     @top_node = Pointer(ExampleGroup).null
+    @spec_time = Time::Span.zero
   end
 
   private def describe_internal(description, file, line)
@@ -26,19 +28,26 @@ struct PicoTest::Spec
 
   private def it_internal(description, file, line)
     @formatter.new_scope do
+      start = Time.monotonic
       begin
         yield
       rescue ex : PicoTest::AssertionError
+        elapse = Time.monotonic - start
+        @spec_time += elapse
         node = Example(Failed).new(@top_node, description, file, line)
         node.exception = ex
         @formatter.report(node)
         @failed += 1
       rescue ex
+        elapse = Time.monotonic - start
+        @spec_time += elapse
         node = Example(Error).new(@top_node, description, file, line)
         node.exception = PicoTest::UnhandledError.new(ex, file, line)
         @formatter.report(node)
         @error += 1
       else
+        elapse = Time.monotonic - start
+        @spec_time += elapse
         node = Example(Pass).new(@top_node, description, file, line)
         @formatter.report(node)
         @passed += 1
@@ -70,6 +79,7 @@ struct PicoTest::Spec
       @failed = 0
       @error = 0
       @pending = 0
+      @total_time = Time::Span.zero
     end
 
     # :nodoc:
@@ -83,6 +93,7 @@ struct PicoTest::Spec
       @failed += spec_ptr.value.@failed
       @error += spec_ptr.value.@error
       @pending += spec_ptr.value.@pending
+      @total_time += spec_ptr.value.@spec_time
 
       spec_ptr.value.flush_to(@io)
     end
@@ -90,11 +101,27 @@ struct PicoTest::Spec
     def print_statistics_and_exit
       total = @passed + @failed + @error + @pending
       status = "#{total} examples, #{@failed} failures, #{@error} errors, #{@pending} pendings"
+
+      @io.puts "Finished in #{typeof(self).to_human(@total_time)}"
       if @failed == 0 && @error == 0
-        puts status.colorize(:light_green)
+        @io.puts status.colorize(:light_green)
       else
-        puts status.colorize(:red)
+        @io.puts status.colorize(:red)
         abort
+      end
+    end
+
+    def self.to_human(span : Time::Span)
+      if span < 1.millisecond
+        "#{(span.total_milliseconds*1000).round.to_i} µs"
+      elsif span < 1.second
+        "#{span.total_milliseconds.round(2)} ms"
+      elsif span < 1.minute
+        "#{span.total_seconds.round(2)} s"
+      elsif span < 1.hour
+        "#{span.minutes} m #{span.seconds} s"
+      else
+        "#{span.total_hours.to_i} h #{span.minutes} m #{span.seconds} s"
       end
     end
 

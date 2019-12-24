@@ -1,7 +1,7 @@
 require "colorize"
 require "time"
 require "./context"
-require "./formatter"
+require "./formatter/**"
 
 struct PicoTest::Spec
   @passed = 0
@@ -9,7 +9,7 @@ struct PicoTest::Spec
   @error = 0
   @pending = 0
 
-  def initialize(@io : IO, @formatter : Formatter)
+  def initialize(@formatter : Formatter)
     @top_node = Pointer(ExampleGroup).null
     @spec_time = Time::Span.zero
   end
@@ -67,18 +67,22 @@ struct PicoTest::Spec
     (->self.itself).closure_data.as(Pointer(self))
   end
 
-  def flush_to(target : IO)
-    @io.to_s(target) if @io.is_a?(IO::Memory)
+  def flush_to(out_io : IO, err_io : IO)
+    @formatter.finish
+    @formatter.flush_to out_io, err_io
   end
 
   struct Runner
     @@global_runner = new(STDOUT)
 
     def initialize(@io : IO)
+      @err_out = IO::Memory.new
+
       @passed = 0
       @failed = 0
       @error = 0
       @pending = 0
+
       @total_time = Time::Span.zero
     end
 
@@ -95,10 +99,14 @@ struct PicoTest::Spec
       @pending += spec_ptr.value.@pending
       @total_time += spec_ptr.value.@spec_time
 
-      spec_ptr.value.flush_to(@io)
+      spec_ptr.value.flush_to(@io, @err_out)
     end
 
     def print_statistics_and_exit
+      @io.puts
+      @err_out.to_s(@io)
+      @io.puts
+
       total = @passed + @failed + @error + @pending
       status = "#{total} examples, #{@failed} failures, #{@error} errors, #{@pending} pendings"
 

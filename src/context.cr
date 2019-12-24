@@ -1,3 +1,4 @@
+require "colorize"
 require "./error"
 
 struct PicoTest
@@ -17,9 +18,11 @@ struct PicoTest
       super(description, file, line)
       @parent = parent
     end
-  end
 
-  private struct None; end
+    def self.color(obj)
+      obj.colorize(:white)
+    end
+  end
 
   private struct Pass; end
 
@@ -30,6 +33,13 @@ struct PicoTest
   private struct Pending; end
 
   struct Example(T) < Context
+    ColorSet = {
+      Pass:    :light_green,
+      Pending: :light_gray,
+      Failed:  :red,
+      Error:   :red,
+    }
+
     property exception : (UnhandledError | AssertionError | Nil)
     @parent : Pointer(ExampleGroup)
 
@@ -46,6 +56,14 @@ struct PicoTest
         yield it.value
         it = it.value.@parent
       end
+    end
+
+    def self.color(obj)
+      {% for key, value in ColorSet %}
+        {% if T.id.ends_with?(key.stringify) %}
+          obj.colorize {{ value }}
+        {% end %}
+      {% end %}
     end
   end
 end

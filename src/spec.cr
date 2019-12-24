@@ -88,7 +88,7 @@ struct PicoTest::Spec
 
     # :nodoc:
     def new_spec
-      Spec.new(@io, VerboseFormatter.new(@io))
+      Spec.new(DotFormatter.new(@io, @err_out))
     end
 
     # :nodoc:

@@ -17,7 +17,7 @@ struct PicoTest
       @after_skippable = true
     end
 
-    def run_validate_at(line : Int32)
+    private def run_validate_at(line : Int32)
       case {@phase, @line}
       when {Phase::Run, .<=(line)}
         yield
@@ -27,7 +27,7 @@ struct PicoTest
       nil
     end
 
-    def next_phase! : Bool
+    protected def next_phase! : Bool
       while true
         case @phase
         when Phase::Init
@@ -54,7 +54,7 @@ struct PicoTest
       end
     end
 
-    def next_line_state!(@line : Int32) : Bool
+    private def next_line_state!(@line : Int32) : Bool
       !(@before_skippable && @after_skippable)
     end
 
@@ -76,7 +76,7 @@ struct PicoTest
       end
     end
 
-    def describe_impl(description, file, line, end_line) : Nil
+    private def describe_impl(description, file, line, end_line) : Nil
       @spec.value.describe_impl(description, file, line, end_line) do
         with itself yield
       end
@@ -92,7 +92,7 @@ struct PicoTest
       end
     end
 
-    def it_impl(description, file, line, end_line) : Nil
+    private def it_impl(description, file, line, end_line) : Nil
       @spec.value.it_impl(description, file, line, end_line) do
         with PicoTest::Assert yield
       end
@@ -108,7 +108,7 @@ struct PicoTest
       end
     end
 
-    def pending_impl(description, file, line, end_line)
+    private def pending_impl(description, file, line, end_line)
       @spec.value.pending_impl(description, file, line, end_line)
     end
 

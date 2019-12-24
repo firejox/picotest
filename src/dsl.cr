@@ -1,14 +1,12 @@
-require "./macros"
 require "./machine"
 require "./error"
 require "./assert"
 require "./spec"
 
-include PicoTest::Macros
-
 struct PicoTest
   struct Spec
-    protected def describe_impl(description : String, file, line, end_line) : Nil
+    # :nodoc:
+    def describe_impl(description : String, file, line, end_line) : Nil
       describe_internal(description, file, line) do
         machine = Machine.new(self.self_pointer, Machine::Phase::Init, line)
         with machine yield

@@ -1,5 +1,6 @@
 require "colorize"
 require "time"
+require "channel"
 require "./context"
 require "./formatter/**"
 
@@ -73,8 +74,6 @@ struct PicoTest::Spec
   end
 
   struct Runner
-    @@global_runner = new(STDOUT)
-
     def initialize(@io : IO)
       @err_out = IO::Memory.new
 
@@ -84,11 +83,28 @@ struct PicoTest::Spec
       @pending = 0
 
       @total_time = Time::Span.zero
+
+      @async_count = 0
+      @async_ch = Channel(Nil).new
+    end
+
+    def async_spec_start
+      @async_count += 1
+    end
+
+    def async_spec_end
+      @async_ch.receive?
     end
 
     # :nodoc:
-    def new_spec
-      Spec.new(DotFormatter.new(@io, @err_out))
+    def new_spec(sync = true)
+      if sync
+        Spec.new(DotFormatter.new(@io, @err_out))
+      else
+        out_io = IO::Memory.new
+        err_io = IO::Memory.new
+        Spec.new(DotFormatter.new(out_io, err_io))
+      end
     end
 
     # :nodoc:
@@ -103,6 +119,10 @@ struct PicoTest::Spec
     end
 
     def print_statistics_and_exit
+      @async_count.times do
+        @async_ch.send nil
+      end
+
       @io.puts
       @err_out.to_s(@io)
       @io.puts
@@ -130,16 +150,6 @@ struct PicoTest::Spec
         "#{span.minutes} m #{span.seconds} s"
       else
         "#{span.total_hours.to_i} h #{span.minutes} m #{span.seconds} s"
-      end
-    end
-
-    def self.global_runner
-      with @@global_runner yield
-    end
-
-    at_exit do
-      Runner.global_runner do
-        print_statistics_and_exit
       end
     end
   end

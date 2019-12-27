@@ -4,6 +4,8 @@ require "./assert"
 require "./spec"
 
 struct PicoTest
+  @@runner = Spec::Runner.new STDOUT
+
   struct Spec
     # :nodoc:
     def describe_impl(description : String, file, line, end_line) : Nil
@@ -35,11 +37,44 @@ struct PicoTest
     end
   end
 
-  def self.spec
-    Spec::Runner.global_runner do
-      spec = new_spec
+  # :nodoc:
+  def self.global_runner
+    with @@runner yield
+  end
+
+  # :nodoc:
+  def self.spec_impl(sync = true)
+    global_runner do
+      spec = new_spec sync
       with spec yield
       report pointerof(spec)
+    end
+  end
+
+  macro spec(sync = true, &block)
+    {% if block && block.body %}
+      {% if sync %}
+        PicoTest.spec_impl do
+          {{ block.body }}
+        end
+      {% else %}
+        PicoTest.global_runner do
+          async_spec_start
+          spawn do
+            PicoTest.spec_impl(sync: false) do
+              {{ block.body }}
+            end
+
+            PicoTest.global_runner { async_spec_end }
+          end
+        end
+      {% end %}
+    {% end %}
+  end
+
+  at_exit do
+    global_runner do
+      print_statistics_and_exit
     end
   end
 end

@@ -1,4 +1,4 @@
-# picotest
+# picotest [![Build Status](https://github.com/firejox/picotest/workflows/Crystal%20CI/badge.svg?branch=master)](https://github.com/firejox/picotest/actions)
 
 A tiny test framework for Crystal.
 

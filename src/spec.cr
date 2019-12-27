@@ -35,21 +35,21 @@ struct PicoTest::Spec
       rescue ex : PicoTest::AssertionError
         elapse = Time.monotonic - start
         @spec_time += elapse
-        node = Example(Failed).new(@top_node, description, file, line)
+        node = Example(Failed).new(@top_node, elapse, description, file, line)
         node.exception = ex
         @formatter.report(node)
         @failed += 1
       rescue ex
         elapse = Time.monotonic - start
         @spec_time += elapse
-        node = Example(Error).new(@top_node, description, file, line)
+        node = Example(Error).new(@top_node, elapse, description, file, line)
         node.exception = PicoTest::UnhandledError.new(ex, file, line)
         @formatter.report(node)
         @error += 1
       else
         elapse = Time.monotonic - start
         @spec_time += elapse
-        node = Example(Pass).new(@top_node, description, file, line)
+        node = Example(Pass).new(@top_node, elapse, description, file, line)
         @formatter.report(node)
         @passed += 1
       end
@@ -58,7 +58,7 @@ struct PicoTest::Spec
 
   private def pending_internal(description, file, line)
     @formatter.new_scope do
-      node = Example(Pending).new(@top_node, description, file, line)
+      node = Example(Pending).new(@top_node, Time::Span.zero, description, file, line)
       @formatter.report(node)
       @pending += 1
     end

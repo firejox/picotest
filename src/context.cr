@@ -1,4 +1,5 @@
 require "colorize"
+require "time"
 require "./error"
 
 struct PicoTest
@@ -41,10 +42,12 @@ struct PicoTest
     }
 
     property exception : (UnhandledError | AssertionError | Nil)
+    getter :duration
     @parent : Pointer(ExampleGroup)
 
-    def initialize(parent : Pointer(ExampleGroup), description : String, file : String, line : Int32)
+    def initialize(parent : Pointer(ExampleGroup), duration : Time::Span, description : String, file : String, line : Int32)
       super(description, file, line)
+      @duration = duration
       @parent = parent
     end
 

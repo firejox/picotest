@@ -94,12 +94,36 @@ PicoTest.spec do
 end
 ```
 
+### Async Spec
+
+By default, each spec will run synchronously. You can make the spec run concurrently by setting `sync: false`. For example,
+```crystal
+# A
+PicoTest.spec sync: false do
+  describe "Spec A" do
+    it "run asynchronously" do
+      # do something
+    end
+  end
+end
+
+# B
+PicoTest.spec sync: false do
+  describe "Spec B" do
+    it "run asynchronously" do
+      # do other thing
+    end
+  end
+end
+```
+A and B will run concurrently.
+
 ## Development
 
 - [x] `before`, `after` hooks
 - [x] report duration of spec
+- [x] run spec unit parallel in MT mode
 - [ ] tag on test cases
-- [ ] run spec unit parallel in MT mode
 - [ ] power assert support
 
 ## Contributing

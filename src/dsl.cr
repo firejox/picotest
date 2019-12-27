@@ -47,11 +47,11 @@ struct PicoTest
     global_runner do
       spec = new_spec sync
       with spec yield
-      report pointerof(spec)
+      report pointerof(spec), sync: sync
     end
   end
 
-  macro spec(sync = true, &block)
+  macro spec(sync = true, same_thread = false, &block)
     {% if block && block.body %}
       {% if sync %}
         PicoTest.spec_impl do
@@ -60,12 +60,10 @@ struct PicoTest
       {% else %}
         PicoTest.global_runner do
           async_spec_start
-          spawn do
+          spawn(same_thread: {{ same_thread }}) do
             PicoTest.spec_impl(sync: false) do
               {{ block.body }}
             end
-
-            PicoTest.global_runner { async_spec_end }
           end
         end
       {% end %}

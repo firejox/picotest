@@ -1,6 +1,7 @@
 require "colorize"
 require "time"
 require "channel"
+require "mutex"
 require "./context"
 require "./formatter/**"
 
@@ -85,15 +86,13 @@ struct PicoTest::Spec
       @total_time = Time::Span.zero
 
       @async_count = 0
-      @async_ch = Channel(Nil).new
+      @async_spec_finish = Channel(Nil).new
+      @report_barrier = Channel(Nil).new
+      @mutex = Mutex.new Mutex::Protection::Unchecked
     end
 
     def async_spec_start
       @async_count += 1
-    end
-
-    def async_spec_end
-      @async_ch.receive?
     end
 
     # :nodoc:
@@ -108,19 +107,26 @@ struct PicoTest::Spec
     end
 
     # :nodoc:
-    def report(spec_ptr : Spec*)
-      @passed += spec_ptr.value.@passed
-      @failed += spec_ptr.value.@failed
-      @error += spec_ptr.value.@error
-      @pending += spec_ptr.value.@pending
-      @total_time += spec_ptr.value.@spec_time
+    def report(spec_ptr : Spec*, sync = true)
+      @report_barrier.receive? unless sync
 
-      spec_ptr.value.flush_to(@io, @err_out)
+      @mutex.synchronize do
+        @passed += spec_ptr.value.@passed
+        @failed += spec_ptr.value.@failed
+        @error += spec_ptr.value.@error
+        @pending += spec_ptr.value.@pending
+        @total_time += spec_ptr.value.@spec_time
+
+        spec_ptr.value.flush_to(@io, @err_out)
+      end
+
+      @async_spec_finish.receive? unless sync
     end
 
     def print_statistics_and_exit
+      @report_barrier.close
       @async_count.times do
-        @async_ch.send nil
+        @async_spec_finish.send nil
       end
 
       @io.puts

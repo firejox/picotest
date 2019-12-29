@@ -44,10 +44,8 @@ struct PicoTest
 
   # :nodoc:
   def self.spec_impl(sync = true)
-    global_runner do
-      spec = new_spec sync
-      with spec yield
-      report pointerof(spec), sync: sync
+    @@runner.spec(sync) do
+      with itself yield
     end
   end
 
@@ -72,7 +70,8 @@ struct PicoTest
 
   at_exit do
     global_runner do
-      print_statistics_and_exit
+      print_statistics
+      abort unless succeeded?
     end
   end
 end

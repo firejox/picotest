@@ -70,6 +70,9 @@ struct PicoTest::Spec
   end
 
   def flush_to(out_io : IO, err_io : IO)
+    total = @passed + @failed + @error + @pending
+    return if total == 0
+
     @formatter.finish
     @formatter.flush_to out_io, err_io
   end
@@ -95,19 +98,22 @@ struct PicoTest::Spec
       @async_count += 1
     end
 
-    # :nodoc:
-    def new_spec(sync = true)
-      if sync
-        Spec.new(DotFormatter.new(@io, @err_out))
-      else
-        out_io = IO::Memory.new
-        err_io = IO::Memory.new
-        Spec.new(DotFormatter.new(out_io, err_io))
-      end
+    def spec(sync = true)
+      spec = if sync
+               Spec.new(DotFormatter.new(@io, @err_out))
+             else
+               out_io = IO::Memory.new
+               err_io = IO::Memory.new
+               Spec.new(DotFormatter.new(out_io, err_io))
+             end
+
+      with spec yield
+
+      add_report pointerof(spec), sync
     end
 
     # :nodoc:
-    def report(spec_ptr : Spec*, sync = true)
+    def add_report(spec_ptr : Spec*, sync = true)
       @report_barrier.receive? unless sync
 
       @mutex.synchronize do
@@ -123,25 +129,31 @@ struct PicoTest::Spec
       @async_spec_finish.receive? unless sync
     end
 
-    def print_statistics_and_exit
+    def succeeded?
+      @failed == 0 && @error == 0
+    end
+
+    def print_statistics
       @report_barrier.close
       @async_count.times do
         @async_spec_finish.send nil
       end
 
+      total = @passed + @failed + @error + @pending
+
+      return if total == 0
+
       @io.puts
       @err_out.to_s(@io)
       @io.puts
 
-      total = @passed + @failed + @error + @pending
       status = "#{total} examples, #{@failed} failures, #{@error} errors, #{@pending} pendings"
 
       @io.puts "Finished in #{typeof(self).to_human(@total_time)}"
-      if @failed == 0 && @error == 0
+      if succeeded?
         @io.puts status.colorize(:light_green)
       else
         @io.puts status.colorize(:red)
-        abort
       end
     end
 

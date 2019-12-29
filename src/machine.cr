@@ -28,7 +28,7 @@ struct PicoTest
     end
 
     protected def next_phase! : Bool
-      while true
+      loop do
         case @phase
         when Phase::Init
           @phase = Phase::Before

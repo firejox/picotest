@@ -34,7 +34,7 @@ struct PicoTest
   private struct Pending; end
 
   struct Example(T) < Context
-    ColorSet = {
+    EXAMPLE_COLORS = {
       Pass:    :light_green,
       Pending: :light_gray,
       Failed:  :red,
@@ -62,7 +62,7 @@ struct PicoTest
     end
 
     def self.color(obj)
-      {% for key, value in ColorSet %}
+      {% for key, value in EXAMPLE_COLORS %}
         {% if T.id.ends_with?(key.stringify) %}
           obj.colorize {{ value }}
         {% end %}

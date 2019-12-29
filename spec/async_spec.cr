@@ -7,7 +7,7 @@ PicoTest.spec(sync: false) do
         sleep 5
       end
 
-      assert elapse > 5.seconds
+      assert elapse >= 5.seconds
     end
   end
 end
@@ -19,7 +19,7 @@ PicoTest.spec sync: false do
         sleep 3
       end
 
-      assert elapse > 3.seconds
+      assert elapse >= 3.seconds
     end
   end
 end

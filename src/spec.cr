@@ -134,9 +134,12 @@ struct PicoTest::Spec
     end
 
     def print_statistics
-      @report_barrier.close
-      @async_count.times do
-        @async_spec_finish.send nil
+      sync_spec_time = @total_time
+      elapse = Time.measure do
+        @report_barrier.close
+        @async_count.times do
+          @async_spec_finish.send nil
+        end
       end
 
       total = @passed + @failed + @error + @pending
@@ -149,7 +152,8 @@ struct PicoTest::Spec
 
       status = "#{total} examples, #{@failed} failures, #{@error} errors, #{@pending} pendings"
 
-      @io.puts "Finished in #{typeof(self).to_human(@total_time)}"
+      @io.puts "Finished in #{typeof(self).to_human(sync_spec_time + elapse)}"
+      @io.puts "Total spec time: #{typeof(self).to_human(@total_time)}"
       if succeeded?
         @io.puts status.colorize(:light_green)
       else
